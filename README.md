@@ -34,8 +34,24 @@ No runtime dependency. No API key. No account. One 31MB binary.
 
 ## Install
 
+**Mac (Apple Silicon) / Linux (Ubuntu 24+):**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/jackccrawford/clawmark/main/install.sh | bash
+```
+
+**From source (any platform):**
+
 ```bash
 cargo install clawmark
+```
+
+**Raspberry Pi / Debian Bookworm** (requires system ONNX Runtime):
+
+```bash
+git clone https://github.com/jackccrawford/clawmark && cd clawmark
+ORT_LIB_LOCATION=/usr/local/lib ORT_PREFER_DYNAMIC_LINK=1 cargo build --release
+cp target/release/clawmark ~/.local/bin/
 ```
 
 ## What it looks like
