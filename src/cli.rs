@@ -125,4 +125,10 @@ pub enum Command {
 
     /// Show station stats
     Status,
+
+    /// Run as MCP server for Claude Desktop (stdio transport)
+    #[command(
+        after_help = "Runs clawmark as an MCP server over stdio. Claude Desktop connects\nto this and gets remember/recall/recall_recent tools.\n\nAdd to Claude Desktop config:\n  ~/.config/Claude/claude_desktop_config.json (Linux)\n  ~/Library/Application Support/Claude/claude_desktop_config.json (Mac)\n\n{\n  \"mcpServers\": {\n    \"geniuz\": {\n      \"command\": \"clawmark\",\n      \"args\": [\"mcp\"]\n    }\n  }\n}"
+    )]
+    Mcp,
 }

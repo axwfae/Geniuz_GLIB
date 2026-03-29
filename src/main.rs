@@ -1,6 +1,7 @@
 mod adapter;
 mod cli;
 mod db;
+mod mcp;
 
 use clap::FromArgMatches;
 use cli::{Cli, Command};
@@ -345,6 +346,11 @@ fn run(cli: Cli) -> Result<String, String> {
                 lines.push("Semantic search: ready".to_string());
             }
             Ok(lines.join("\n"))
+        }
+
+        Command::Mcp => {
+            mcp::serve();
+            Ok(String::new())
         }
     }
 }
