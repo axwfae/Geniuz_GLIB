@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-REPO="jackccrawford/clawmark"
+REPO="axwfae/Clawmark_GLIB"
 CLAWMARK_HOME="${CLAWMARK_HOME:-$HOME/.clawmark}"
 INSTALL_DIR="${CLAWMARK_HOME}/bin"
 LIB_DIR="${CLAWMARK_HOME}/lib"
