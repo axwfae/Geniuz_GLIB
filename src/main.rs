@@ -23,9 +23,16 @@ fn main() {
 }
 
 fn default_station_path() -> PathBuf {
-    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-    PathBuf::from(home).join(".clawmark").join("station.db")
+    //let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    //PathBuf::from(home).join(".clawmark").join("station.db")
+    let exe_path = std::env::current_exe()
+        .unwrap_or_else(|_| PathBuf::from("."));
+    let dir = exe_path.parent()
+        .and_then(|p| p.parent())
+        .unwrap_or(std::path::Path::new("."));
+    dir.join("station.db")
 }
+
 
 fn default_claw_workspace() -> PathBuf {
     let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
