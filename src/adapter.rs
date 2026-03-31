@@ -221,5 +221,87 @@ pub fn workspace_summary(ws: &ClawWorkspace) -> String {
         }
     }
 
+lines.join("\n")
+}
+
+// =============================================================================
+// PicoClaw adapter
+// =============================================================================
+
+pub struct PicoClawWorkspace {
+    pub path: PathBuf,
+    pub md_files: Vec<PathBuf>,
+}
+
+pub fn detect_picoclaw_workspace(path: &Path) -> Option<PicoClawWorkspace> {
+    let memory_dir = path.join("memory");
+    if !memory_dir.is_dir() {
+        return None;
+    }
+
+    let mut md_files = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(&memory_dir) {
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if p.extension().map(|e| e == "md").unwrap_or(false) {
+                md_files.push(p);
+            }
+        }
+    }
+
+    Some(PicoClawWorkspace {
+        path: path.to_path_buf(),
+        md_files,
+    })
+}
+
+pub fn picoclaw_summary(ws: &PicoClawWorkspace) -> String {
+    let mut lines = vec![
+        format!("PicoClaw workspace: {}", ws.path.display()),
+    ];
+
+    lines.push(format!("  MD files: {} files", ws.md_files.len()));
+    for f in &ws.md_files {
+        let size = std::fs::metadata(f).map(|m| m.len()).unwrap_or(0);
+        lines.push(format!("    {}: {} bytes", f.file_name().map(|n| n.to_string_lossy()).unwrap_or_default(), size));
+    }
+
     lines.join("\n")
+}
+
+pub fn migrate_picoclaw(
+    workspace: &PicoClawWorkspace,
+    db: &db::DatabaseManager,
+) -> Result<(usize, usize), String> {
+    let mut created = 0;
+    let mut errors = 0;
+
+    for md_file in &workspace.md_files {
+        let filename = md_file.file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| "unknown.md".to_string());
+
+        match parse_md_file(md_file) {
+            Ok(sections) => {
+                for section in sections {
+                    match db.insert_signal(&section.content, &format!("picoclaw: {}", filename)) {
+                        Ok(_) => created += 1,
+                        Err(e) => {
+                            eprintln!("Error inserting section: {}", e);
+                            errors += 1;
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                eprintln!("Error reading {}: {}", filename, e);
+                errors += 1;
+            }
+        }
+    }
+
+    Ok((created, errors))
+}
+
+lines.join("\n")
 }
