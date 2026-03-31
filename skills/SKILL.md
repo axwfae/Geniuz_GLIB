@@ -49,7 +49,12 @@ clawmark tune --random
 
 # Bulk-load existing files
 clawmark capture ./docs/
+
+# Import from OpenClaw workspace
 clawmark capture --openclaw
+
+# Import from PicoClaw workspace
+clawmark capture --picoclaw
 
 # Build embedding cache (once, then automatic)
 clawmark backfill
@@ -94,3 +99,35 @@ A signal doesn't need to be long. It needs to be complete.
 Signals live in a SQLite database. Semantic search uses a local BERT model — no API calls, no cloud, runs fully offline. The model downloads once (~118MB) on first search. Every signal after that is embedded automatically.
 
 Search finds signals by meaning, not keywords. "Authentication middleware" matches a signal about "token validation ordering" because the concepts overlap.
+
+## Workspace adapters
+
+clawmark supports importing from different workspace formats:
+
+### OpenClaw
+
+Path: `~/.openclaw/workspace/`
+
+```
+workspace/
+├── MEMORY.md              # Long-term memory
+├── memory/                # Daily logs
+│   ├── 2024-01-01.md
+│   └── 2024-01-02.md
+└── AGENTS.md              # Agent definitions (optional)
+```
+
+### PicoClaw
+
+Path: `~/.picoclaw/workspace/memory/`
+
+```
+.picoclaw/
+└── workspace/
+    └── memory/            # All .md files here
+        ├── notes.md
+        ├── 2024-01-01.md
+        └── ...
+```
+
+Both adapters scan their respective directories and import all markdown files as signals. Use `--openclaw` or `--picoclaw` to specify which workspace to import from.
