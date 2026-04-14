@@ -2,7 +2,7 @@
 ; Per-user install (no admin), matches the philosophy of "your AI on your machine"
 
 #define MyAppName "Geniuz"
-#define MyAppVersion "1.0.2"
+#define MyAppVersion "1.0.3"
 #define MyAppPublisher "Managed Ventures LLC"
 #define MyAppURL "https://geniuz.life"
 #define MyAppExeName "geniuz.exe"
@@ -31,7 +31,12 @@ WizardStyle=modern
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 UninstallDisplayName={#MyAppName}
-UninstallDisplayIcon={app}\{#MyAppExeName}
+UninstallDisplayIcon={app}\Geniuz.ico
+; Geniuz.ico is multi-resolution (16/32/48/64/128/256). Used as:
+;   - The installer .exe icon (SetupIconFile)
+;   - The Add/Remove Programs entry icon (UninstallDisplayIcon → file in install dir)
+;   - The uninstaller .exe icon (auto-derived from SetupIconFile by Inno)
+SetupIconFile=Geniuz.ico
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -39,6 +44,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Files]
 Source: "geniuz.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "geniuz-embed.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "Geniuz.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Registry]
 ; Add install dir to user PATH (only if not already present)
