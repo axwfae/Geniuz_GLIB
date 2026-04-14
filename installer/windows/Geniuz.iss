@@ -47,14 +47,14 @@ Root: HKCU; Subkey: "Environment"; ValueType: expandsz; ValueName: "Path"; \
   Check: NeedsAddPath('{app}')
 
 [Run]
-; Wire Claude Desktop MCP config. Pipes stdout+stderr to a log so any failure
-; is debuggable — silent postinstall failures were the v1.0.1 -> v1.0.2 bug.
-; The CLI now writes to all known Claude Desktop config locations:
+; Wire Claude Desktop MCP config. The CLI (v1.0.2+) now writes to all known
+; Claude Desktop config locations:
 ;   - %APPDATA%\Claude\         (the .exe variant)
 ;   - %LOCALAPPDATA%\Packages\Claude_*\LocalCache\Roaming\Claude\
 ;     (the Microsoft Store / MSIX packaged variant)
-Filename: "{cmd}"; \
-  Parameters: "/C ""{app}\{#MyAppExeName}"" mcp install > ""{userappdata}\geniuz-mcp-install.log"" 2>&1"; \
+; This is much more robust than v1.0.1, which only wrote the standard path
+; and silently missed Store-version Claude users.
+Filename: "{app}\{#MyAppExeName}"; Parameters: "mcp install"; \
   StatusMsg: "Configuring Claude Desktop integration..."; \
   Flags: runhidden
 
