@@ -78,7 +78,13 @@ Installs CLI to `%LOCALAPPDATA%\Programs\Geniuz\`, adds to PATH, wires Claude De
 curl -fsSL https://raw.githubusercontent.com/jackccrawford/geniuz/main/install.sh | bash
 ```
 
-Detects architecture (x86_64 or arm64), downloads the matching binary, installs to `~/.geniuz/bin/`, symlinks to `~/.local/bin/geniuz` (on PATH by default on most distros). Bundles ONNX Runtime as a sibling `.so` so no system dependencies needed.
+Detects architecture, downloads the matching binary, installs to `~/.geniuz/bin/`, symlinks to `~/.local/bin/geniuz`.
+
+**Works on:**
+- **x86_64** (Ubuntu, Debian, Fedora, Arch — modern distros with glibc 2.34+)
+- **arm64** (Raspberry Pi 5, Pi OS / Debian Bookworm+, NVIDIA Jetson, Ampere, AWS Graviton, Oracle Ampere)
+
+The arm64 build bundles ONNX Runtime 1.22 as a sibling `.so` and wraps the CLI with an `LD_LIBRARY_PATH` script, so it runs cleanly on older-glibc systems like Pi OS Bookworm (glibc 2.36). The x86_64 build is a single static binary.
 
 Claude Desktop isn't available on Linux, but `geniuz mcp serve` works as a stdio MCP server for any Linux-compatible MCP client (Claude Code, Cursor, Windsurf, Aider, custom agents). Run `geniuz mcp install` if you want — it silently writes the config, harmless either way.
 
@@ -119,6 +125,7 @@ Built artifacts are attached to each [GitHub release](https://github.com/jackccr
 - `Geniuz.dmg` — Mac (arm64, Sonoma 14+)
 - `Geniuz-Setup.exe` — Windows (x86_64, Win 10/11)
 - `geniuz-linux-amd64.tar.gz` — Linux (x86_64)
+- `geniuz-linux-arm64.tar.gz` — Linux (arm64, Raspberry Pi 5 compatible)
 
 ## Works with everything
 
