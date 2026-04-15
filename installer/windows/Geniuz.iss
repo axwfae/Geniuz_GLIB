@@ -57,6 +57,11 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Source: "geniuz.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "geniuz-embed.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "Geniuz.ico"; DestDir: "{app}"; Flags: ignoreversion
+; Bundled ONNX Runtime 1.22 (CPU-only) — shipped alongside the CLI so Windows
+; never pulls an incompatible DirectML/onnxruntime.dll from System32. Same
+; pattern we use for Pi 5 arm64 Linux (ORT 1.22 + dynamic-link).
+Source: "onnxruntime.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "onnxruntime_providers_shared.dll"; DestDir: "{app}"; Flags: ignoreversion
 
 [Dirs]
 ; Create the user-chosen data directory in user context (no sandbox issue).
