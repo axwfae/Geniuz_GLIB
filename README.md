@@ -58,13 +58,31 @@ The model downloads once (~118MB) on first search. Every memory after that is em
 
 ## Install
 
-Three paths — pick the one that matches your setup.
+Pick the path that matches your setup.
 
-### Mac — one click
+### Mac — one click (consumer path)
 
-Download **[Geniuz.dmg](https://github.com/jackccrawford/geniuz/releases/latest/download/Geniuz.dmg)**, double-click, run the installer. Signed and notarized by Managed Ventures LLC — no Gatekeeper warnings.
+Download **[Geniuz.dmg](https://github.com/jackccrawford/geniuz/releases/latest/download/Geniuz.dmg)**, double-click, drag to Applications. Signed and notarized by Managed Ventures LLC — no Gatekeeper warnings.
 
-Installs the CLI to `/usr/local/bin/geniuz`, the menu bar app to `/Applications/Geniuz.app`, and wires Claude Desktop automatically. Requires macOS Sonoma (14) or later, Apple Silicon.
+Installs the menu bar app to `/Applications/Geniuz.app`. Launch it once; use the "Configure Claude Connection" button to wire up Claude Desktop. Requires macOS Sonoma (14) or later. Apple Silicon native; Intel Macs run via Rosetta 2 (universal binary coming in a near-term release).
+
+**If you want the CLI too** (for scripting, or for agents that aren't Claude Desktop), it's bundled inside the app. Add it to your PATH:
+
+```bash
+sudo ln -sf /Applications/Geniuz.app/Contents/Resources/geniuz /usr/local/bin/geniuz
+```
+
+Or skip the DMG entirely and use the CLI-first install below — that path installs to `~/.geniuz/bin/` and adds itself to your PATH without sudo.
+
+### Mac / Linux — one command (developer path)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/jackccrawford/geniuz/main/install.sh | bash
+```
+
+Detects your OS and architecture, downloads the matching binary, installs to `~/.geniuz/bin/`. No DMG, no menu bar app — just the CLI. Best for developers, fleet operators, and anyone using Claude Code, Cursor, Windsurf, Aider, or any agent framework that can run a shell command.
+
+Mac users: this is the path to take if you plan to use `geniuz` from Terminal, or if you want a CLI install on top of (or instead of) the DMG.
 
 ### Windows — one click
 
@@ -72,15 +90,10 @@ Download **[Geniuz-Setup.exe](https://github.com/jackccrawford/geniuz/releases/l
 
 Installs CLI to `%LOCALAPPDATA%\Programs\Geniuz\`, adds to PATH, wires Claude Desktop (both the `.exe` and Microsoft Store variants). Requires Windows 10 or 11. Pick your memory location in the wizard — default is `%USERPROFILE%\.geniuz\`.
 
-### Linux — one command
+### Linux platform notes
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/jackccrawford/geniuz/main/install.sh | bash
-```
+The `install.sh` path above works on Linux too. Supported architectures:
 
-Detects architecture, downloads the matching binary, installs to `~/.geniuz/bin/`, symlinks to `~/.local/bin/geniuz`.
-
-**Works on:**
 - **x86_64** (Ubuntu, Debian, Fedora, Arch — modern distros with glibc 2.34+)
 - **arm64** (Raspberry Pi 5, Pi OS / Debian Bookworm+, NVIDIA Jetson, Ampere, AWS Graviton, Oracle Ampere)
 
