@@ -1,16 +1,21 @@
 import Foundation
 import SQLite3
 import Combine
+import AppKit
 
 class GeniuzService: ObservableObject {
     @Published var memoryCount: Int = 0
-    @Published var embeddingCount: Int = 0
-    @Published var lastSignalGist: String? = nil
-    @Published var lastSignalDate: String? = nil
+    @Published var recentGists: [String] = []
     @Published var mcpInstalled: Bool = false
     @Published var stationExists: Bool = false
+    @Published var recentExpanded: Bool = false
+    @Published var restartRequired: Bool = false
 
     private var timer: Timer?
+    private var claudeAtConfigureTime: Set<pid_t> = []
+    private var claudeSeenAfterConfigure: Set<pid_t> = []
+
+    private let claudeBundleID = "com.anthropic.claudefordesktop"
 
     /// Real home directory via getpwuid — not remapped by sandbox
     private var realHome: String {
@@ -21,14 +26,7 @@ class GeniuzService: ObservableObject {
     }
 
     var stationPath: String {
-        let memoryPath = "\(realHome)/.geniuz/memory.db"
-        let legacyPath = "\(realHome)/.geniuz/station.db"
-        if FileManager.default.fileExists(atPath: memoryPath) {
-            return memoryPath
-        } else if FileManager.default.fileExists(atPath: legacyPath) {
-            return legacyPath
-        }
-        return memoryPath
+        return "\(realHome)/.geniuz/memory.db"
     }
 
     var geniuzBinaryPath: String {
@@ -45,10 +43,21 @@ class GeniuzService: ObservableObject {
         timer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
             self?.refresh()
         }
+
+        let nc = NSWorkspace.shared.notificationCenter
+        nc.addObserver(self,
+                       selector: #selector(appLaunched(_:)),
+                       name: NSWorkspace.didLaunchApplicationNotification,
+                       object: nil)
+        nc.addObserver(self,
+                       selector: #selector(appTerminated(_:)),
+                       name: NSWorkspace.didTerminateApplicationNotification,
+                       object: nil)
     }
 
     deinit {
         timer?.invalidate()
+        NSWorkspace.shared.notificationCenter.removeObserver(self)
     }
 
     func refresh() {
@@ -60,9 +69,7 @@ class GeniuzService: ObservableObject {
             DispatchQueue.main.async {
                 self.stationExists = station.exists
                 self.memoryCount = station.memories
-                self.embeddingCount = station.embeddings
-                self.lastSignalGist = station.lastGist
-                self.lastSignalDate = station.lastDate
+                self.recentGists = station.recentGists
                 self.mcpInstalled = mcp
             }
         }
@@ -73,9 +80,7 @@ class GeniuzService: ObservableObject {
     private struct StationInfo {
         var exists: Bool = false
         var memories: Int = 0
-        var embeddings: Int = 0
-        var lastGist: String? = nil
-        var lastDate: String? = nil
+        var recentGists: [String] = []
     }
 
     private func readStation() -> StationInfo {
@@ -105,29 +110,19 @@ class GeniuzService: ObservableObject {
         }
         sqlite3_finalize(stmt)
 
-        // Embedding count
-        if sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM memory_embeddings", -1, &stmt, nil) == SQLITE_OK {
-            if sqlite3_step(stmt) == SQLITE_ROW {
-                info.embeddings = Int(sqlite3_column_int(stmt, 0))
-            }
-        }
-        sqlite3_finalize(stmt)
-
-        // Last signal — gist is inside payload JSON
-        if sqlite3_prepare_v2(db, "SELECT COALESCE(json_extract(payload, '$.gist'), substr(json_extract(payload, '$.content'), 1, 100)), created_at FROM memories ORDER BY created_at DESC LIMIT 1", -1, &stmt, nil) == SQLITE_OK {
-            if sqlite3_step(stmt) == SQLITE_ROW {
+        // Recent memories — gist text only, most recent 5
+        let sql = "SELECT COALESCE(json_extract(payload, '$.gist'), substr(json_extract(payload, '$.content'), 1, 100)) FROM memories ORDER BY created_at DESC LIMIT 5"
+        if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
+            while sqlite3_step(stmt) == SQLITE_ROW {
                 if let cStr = sqlite3_column_text(stmt, 0) {
-                    info.lastGist = String(cString: cStr)
-                }
-                if let cStr = sqlite3_column_text(stmt, 1) {
-                    let full = String(cString: cStr)
-                    info.lastDate = String(full.prefix(16))
+                    info.recentGists.append(String(cString: cStr))
                 }
             }
         }
         sqlite3_finalize(stmt)
 
-        NSLog("[geniuz-app] station: %d memories, %d embeddings, lastGist=%@", info.memories, info.embeddings, info.lastGist ?? "nil")
+        NSLog("[geniuz-app] station: %d memories, %d recent gists",
+              info.memories, info.recentGists.count)
         return info
     }
 
@@ -146,7 +141,7 @@ class GeniuzService: ObservableObject {
         return found
     }
 
-    func installMcp() {
+    func configureClaudeConnection() {
         let binary = geniuzBinaryPath
 
         var config: [String: Any]
@@ -160,7 +155,7 @@ class GeniuzService: ObservableObject {
         }
 
         var servers = config["mcpServers"] as? [String: Any] ?? [:]
-        servers["Geniuz"] = [
+        servers["geniuz"] = [
             "command": binary,
             "args": ["mcp", "serve"]
         ]
@@ -170,25 +165,56 @@ class GeniuzService: ObservableObject {
             try? data.write(to: URL(fileURLWithPath: claudeConfigPath))
         }
 
+        // Snapshot Claude Desktop PIDs at configure time; banner clears when they all exit
+        // and at least one replacement has launched.
+        let runningClaudes = NSWorkspace.shared.runningApplications
+            .filter { $0.bundleIdentifier == claudeBundleID }
+            .map { $0.processIdentifier }
+        claudeAtConfigureTime = Set(runningClaudes)
+        claudeSeenAfterConfigure = []
+        restartRequired = true
+
+        NSLog("[geniuz-app] configured — Claude PIDs at configure time: %@",
+              claudeAtConfigureTime.map(String.init).joined(separator: ","))
+
         refresh()
     }
 
-    func uninstallMcp() {
-        guard let data = FileManager.default.contents(atPath: claudeConfigPath),
-              var json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              var servers = json["mcpServers"] as? [String: Any] else {
-            return
-        }
+    // MARK: - Claude Desktop lifecycle
 
-        let key = servers.keys.first { $0.lowercased() == "geniuz" }
-        if let key = key {
-            servers.removeValue(forKey: key)
-            json["mcpServers"] = servers
-            if let data = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys]) {
-                try? data.write(to: URL(fileURLWithPath: claudeConfigPath))
+    @objc private func appLaunched(_ note: Notification) {
+        guard restartRequired,
+              let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+              app.bundleIdentifier == claudeBundleID else { return }
+        let pid = app.processIdentifier
+        if !claudeAtConfigureTime.contains(pid) {
+            claudeSeenAfterConfigure.insert(pid)
+            evaluateRestartState()
+        }
+    }
+
+    @objc private func appTerminated(_ note: Notification) {
+        guard restartRequired,
+              let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+              app.bundleIdentifier == claudeBundleID else { return }
+        let pid = app.processIdentifier
+        claudeAtConfigureTime.remove(pid)
+        evaluateRestartState()
+    }
+
+    private func evaluateRestartState() {
+        // Banner clears when every Claude instance present at configure time has exited
+        // AND at least one new Claude instance has launched since.
+        if claudeAtConfigureTime.isEmpty && !claudeSeenAfterConfigure.isEmpty {
+            DispatchQueue.main.async { [weak self] in
+                self?.restartRequired = false
+                NSLog("[geniuz-app] restart-required banner cleared — Claude Desktop replaced")
             }
         }
 
-        refresh()
+        // Edge case: configure was clicked with no Claude running. First launch counts as "restarted."
+        if claudeAtConfigureTime.isEmpty && claudeSeenAfterConfigure.isEmpty {
+            // Nothing to do — wait for a launch.
+        }
     }
 }

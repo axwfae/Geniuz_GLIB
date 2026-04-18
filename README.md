@@ -127,6 +127,20 @@ Built artifacts are attached to each [GitHub release](https://github.com/jackccr
 - `geniuz-linux-amd64.tar.gz` — Linux (x86_64)
 - `geniuz-linux-arm64.tar.gz` — Linux (arm64, Raspberry Pi 5 compatible)
 
+## Architecture
+
+Geniuz Free exposes three public interfaces:
+
+- **MCP** — for AI agents (Claude Desktop, sub-agents) and for procedural software that wants Geniuz access. Scripts, webhooks, and pipelines should spawn their own `geniuz mcp serve` subprocess and speak MCP over stdio.
+- **CLI** — for developers and power users. Every subcommand supports `--json` output for procedural callers that prefer scripting over MCP.
+- **Menu bar** (Mac) — for humans. Ambient status; no interaction surface.
+
+A full **GUI app** is on the roadmap for humans who want to search, browse, and import without the CLI.
+
+**The SQLite file (`memory.db`) is not a public interface.** Schema may change without notice. Invariants — memory immutability (enforced by triggers), every-memory-has-an-embedding (enforced by the library's write transaction) — hold at the interface boundary, not at the file boundary. If you want programmatic access, go through MCP.
+
+There is no HTTP server in Geniuz Free. Procedural software speaks MCP. This keeps the storage layer free to evolve and the invariants centralized in one place.
+
 ## Works with everything
 
 | Platform | How |
@@ -182,11 +196,11 @@ E5F6A7B8 | 2026-03-08 09:15 | client: Maria — plan approved <- 7A3B29F1
 
 ```
 $ geniuz status
-Folder: ~/.geniuz/folder.db
+Folder: ~/.geniuz/memory.db
 Memories: 847
-Embeddings: 847/847 cached
-Semantic search: ready
 ```
+
+Every memory is embedded at write time — there is no "partially indexed" state.
 
 ## Capture existing knowledge
 
@@ -281,9 +295,11 @@ Memories compound. A single memory is a note. A folder of memories is institutio
 ## Menu bar app
 
 The Geniuz menu bar app (macOS) shows:
-- Memory count and last memory
+- Memory count and recent memories (collapsible list)
 - Claude Desktop connection status
-- One-click connect/disconnect
+- One-click configure for Claude Desktop when it's not yet wired up
+
+The menu bar is a witness, not an interaction surface. To add memories, use Claude Desktop or the CLI. A full interaction app (search, browse, import) is on the roadmap.
 
 Available as a [DMG download](https://github.com/jackccrawford/geniuz/releases/latest/download/Geniuz.dmg), signed and notarized by Managed Ventures LLC.
 

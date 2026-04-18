@@ -109,20 +109,17 @@ impl DatabaseManager {
             uuid.clone()
         };
 
-        // Embed content first (before touching the database)
+        // Embed content first — memory writes require a successful embedding.
+        // The invariant: no memory exists without its embedding.
         let embedding = if let Some(b) = backend {
-            match b.embed(content) {
-                Ok(emb) => Some(emb),
-                Err(e) => { eprintln!("[geniuz] Embedding failed for {}: {}", &uuid[..8], e); None }
-            }
+            b.embed(content)
+                .map_err(|e| format!("Embedding failed: {}. Run 'geniuz status' to check the embedding model.", e))?
         } else {
-            match geniuz::embedding::embed_content(content) {
-                Ok(emb) => Some(emb),
-                Err(e) => { eprintln!("[geniuz] Embedding failed for {}: {}", &uuid[..8], e); None }
-            }
+            geniuz::embedding::embed_content(content)
+                .map_err(|e| format!("Embedding failed: {}. Run 'geniuz status' to check the embedding model.", e))?
         };
 
-        // Insert signal + embedding in one transaction
+        // Insert memory + embedding atomically in one transaction
         let conn = self.conn()?;
         let tx = conn.unchecked_transaction()
             .map_err(|e| format!("Failed to begin transaction: {}", e))?;
@@ -137,13 +134,11 @@ impl DatabaseManager {
                 rusqlite::params![&uuid, &payload_str, &parent_uuid],
             ).map_err(|e| format!("Failed to insert: {}", e))?;
         }
-        if let Some(ref emb) = embedding {
-            let blob = geniuz::embedding::embedding_to_blob(emb);
-            tx.execute(
-                "INSERT OR REPLACE INTO memory_embeddings (memory_uuid, embedding) VALUES (?1, ?2)",
-                rusqlite::params![&uuid, blob],
-            ).map_err(|e| format!("Failed to cache embedding: {}", e))?;
-        }
+        let blob = geniuz::embedding::embedding_to_blob(&embedding);
+        tx.execute(
+            "INSERT INTO memory_embeddings (memory_uuid, embedding) VALUES (?1, ?2)",
+            rusqlite::params![&uuid, blob],
+        ).map_err(|e| format!("Failed to cache embedding: {}", e))?;
         tx.commit().map_err(|e| format!("Failed to commit: {}", e))?;
 
         Ok(uuid[..8].to_string())

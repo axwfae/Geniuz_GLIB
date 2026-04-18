@@ -31,42 +31,9 @@ struct GeniuzMenu: View {
                             .font(.system(.body, design: .rounded))
                     }
 
-                    if service.embeddingCount < service.memoryCount {
-                        HStack(spacing: 6) {
-                            Image(systemName: "circle.fill")
-                                .font(.system(size: 6))
-                                .foregroundColor(.yellow)
-                            Text("\(service.embeddingCount)/\(service.memoryCount) embedded")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    } else if service.memoryCount > 0 {
-                        HStack(spacing: 6) {
-                            Image(systemName: "circle.fill")
-                                .font(.system(size: 6))
-                                .foregroundColor(.green)
-                            Text("Semantic search ready")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-
-                    if let gist = service.lastSignalGist {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Last memory")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                                .textCase(.uppercase)
-                            Text(gist)
-                                .font(.caption)
-                                .lineLimit(2)
-                            if let date = service.lastSignalDate {
-                                Text(date)
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        .padding(.top, 4)
+                    if !service.recentGists.isEmpty {
+                        recentMemoriesSection
+                            .padding(.top, 6)
                     }
                 } else {
                     HStack(spacing: 6) {
@@ -87,7 +54,7 @@ struct GeniuzMenu: View {
 
             Divider()
 
-            // MCP Status
+            // Claude Desktop status
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
                     Image(systemName: service.mcpInstalled ? "checkmark.circle.fill" : "xmark.circle")
@@ -97,36 +64,29 @@ struct GeniuzMenu: View {
                 }
 
                 if !service.mcpInstalled {
-                    Button("Connect to Claude Desktop") {
-                        service.installMcp()
+                    Button("Configure Claude Connection") {
+                        service.configureClaudeConnection()
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
                     .tint(.orange)
                 }
+
+                if service.mcpInstalled && service.restartRequired {
+                    HStack(alignment: .top, spacing: 6) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.yellow)
+                            .font(.caption)
+                        Text("Restart Claude Desktop to activate Geniuz.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.top, 2)
+                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
-
-            Divider()
-
-            // Actions
-            Button(action: { service.refresh() }) {
-                Label("Refresh", systemImage: "arrow.clockwise")
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 6)
-
-            if service.mcpInstalled {
-                Button(action: { service.uninstallMcp() }) {
-                    Label("Disconnect from Claude Desktop", systemImage: "minus.circle")
-                }
-                .buttonStyle(.plain)
-                .foregroundColor(.secondary)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 6)
-            }
 
             Divider()
 
@@ -139,5 +99,48 @@ struct GeniuzMenu: View {
             .padding(.bottom, 4)
         }
         .frame(width: 280)
+    }
+
+    // MARK: - Recent memories section
+
+    private var recentMemoriesSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Button(action: {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    service.recentExpanded.toggle()
+                }
+            }) {
+                HStack(spacing: 4) {
+                    Text("RECENT MEMORIES")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .textCase(.uppercase)
+                    Spacer()
+                    Image(systemName: service.recentExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundColor(.secondary)
+                }
+            }
+            .buttonStyle(.plain)
+
+            let visible = service.recentExpanded
+                ? Array(service.recentGists.prefix(5))
+                : Array(service.recentGists.prefix(1))
+
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(Array(visible.enumerated()), id: \.offset) { _, gist in
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "circle.fill")
+                            .font(.system(size: 4))
+                            .foregroundColor(.secondary)
+                            .padding(.top, 5)
+                        Text(gist)
+                            .font(.caption)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+        }
     }
 }
