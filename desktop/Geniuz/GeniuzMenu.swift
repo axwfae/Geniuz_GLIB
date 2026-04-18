@@ -88,6 +88,11 @@ struct GeniuzMenu: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
 
+            if !service.cliOnPath {
+                Divider()
+                cliInstallSection
+            }
+
             Divider()
 
             Button(action: { NSApplication.shared.terminate(nil) }) {
@@ -99,6 +104,47 @@ struct GeniuzMenu: View {
             .padding(.bottom, 4)
         }
         .frame(width: 280)
+    }
+
+    // MARK: - CLI install section
+
+    private var cliInstallSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: "terminal")
+                    .foregroundColor(.secondary)
+                    .font(.caption)
+                Text("Use Geniuz from Terminal")
+                    .font(.caption)
+            }
+
+            if service.cliCopyConfirmation {
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                        .font(.caption)
+                    Text("Command copied — paste into Terminal and press Return.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.top, 2)
+            } else {
+                Button("Copy Install Command") {
+                    service.copyCliInstallCommand()
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+
+                Text("Copies a one-line `sudo` command. Paste into Terminal to add `geniuz` to your PATH.")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 2)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
     }
 
     // MARK: - Recent memories section

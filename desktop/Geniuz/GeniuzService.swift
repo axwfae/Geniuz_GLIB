@@ -10,6 +10,8 @@ class GeniuzService: ObservableObject {
     @Published var stationExists: Bool = false
     @Published var recentExpanded: Bool = false
     @Published var restartRequired: Bool = false
+    @Published var cliOnPath: Bool = false
+    @Published var cliCopyConfirmation: Bool = false
 
     private var timer: Timer?
     private var claudeAtConfigureTime: Set<pid_t> = []
@@ -65,13 +67,54 @@ class GeniuzService: ObservableObject {
             guard let self = self else { return }
             let station = self.readStation()
             let mcp = self.checkMcpInstalled()
+            let onPath = self.checkCliOnPath()
 
             DispatchQueue.main.async {
                 self.stationExists = station.exists
                 self.memoryCount = station.memories
                 self.recentGists = station.recentGists
                 self.mcpInstalled = mcp
+                self.cliOnPath = onPath
             }
+        }
+    }
+
+    // MARK: - CLI on PATH
+
+    /// Best-effort check: is there a geniuz executable at a conventional PATH location?
+    /// Under the sandbox, file checks outside the temp-exception scope (/Users) may
+    /// silently return false. That's acceptable — a false negative surfaces the
+    /// "Install CLI to Terminal" action, which the user can ignore if already installed.
+    func checkCliOnPath() -> Bool {
+        let candidates = [
+            "/usr/local/bin/geniuz",
+            "/opt/homebrew/bin/geniuz",
+            "\(realHome)/.local/bin/geniuz",
+            "\(realHome)/.geniuz/bin/geniuz",
+        ]
+        let fm = FileManager.default
+        for path in candidates {
+            if fm.isExecutableFile(atPath: path) {
+                return true
+            }
+        }
+        return false
+    }
+
+    /// Copies a ready-to-paste sudo command to the clipboard that symlinks the
+    /// bundled CLI into /usr/local/bin/geniuz. The user pastes into Terminal; the
+    /// app never attempts privileged execution itself (sandbox-friendly).
+    func copyCliInstallCommand() {
+        let bundled = geniuzBinaryPath
+        let command = "sudo ln -sf \"\(bundled)\" /usr/local/bin/geniuz"
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(command, forType: .string)
+        NSLog("[geniuz-app] copied CLI install command: %@", command)
+
+        cliCopyConfirmation = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+            self?.cliCopyConfirmation = false
         }
     }
 
