@@ -5,9 +5,18 @@ import AppKit
 struct GeniuzApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
+    // Menu-bar-only app: no Scenes. The status item is created in
+    // AppDelegate.applicationDidFinishLaunching. Returning an empty
+    // `Settings` scene would add an empty "Preferences..." menu item;
+    // returning no scenes at all gives us the clean menu-bar-only UX.
     var body: some Scene {
         Settings {
             EmptyView()
+        }
+        .commands {
+            // Remove default "Preferences..." from the app menu; we have
+            // no settings surface yet. Re-adding when real settings exist.
+            CommandGroup(replacing: .appSettings) {}
         }
     }
 }
