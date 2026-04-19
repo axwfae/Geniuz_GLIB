@@ -4,6 +4,12 @@
 //! double-click opens a tiny status window showing memory count.
 //! No polling, no configure flow, no recent memories — those land in checkpoint 2+.
 
+// Don't allocate a console window on Windows — this is a GUI app.
+// The `windows` subsystem is the PE-level flag that tells Windows not to
+// attach stdin/stdout/stderr to a console. Without this, Windows creates
+// a black console window on launch.
+#![windows_subsystem = "windows"]
+
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
