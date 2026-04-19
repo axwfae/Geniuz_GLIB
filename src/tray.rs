@@ -185,12 +185,14 @@ fn build_menu(status: &Status) -> MenuBuild {
     menu.append(&header).ok();
     menu.append(&PredefinedMenuItem::separator()).ok();
 
-    // Recent memories submenu — only if there are any
+    // Recent memories submenu — only if there are any.
+    // Bullet prefix matches the Mac menu bar's secondary-color dot affordance;
+    // `•` (U+2022) is the standard menu bullet on Windows too.
     if !status.recent_gists.is_empty() {
         let submenu = Submenu::new("Recent memories", true);
         for gist in &status.recent_gists {
-            let shown = truncate_for_menu(gist, 80);
-            let item = MenuItem::new(shown, false, None);
+            let shown = truncate_for_menu(gist, 78);
+            let item = MenuItem::new(format!("•  {}", shown), false, None);
             submenu.append(&item).ok();
         }
         menu.append(&submenu).ok();
