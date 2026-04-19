@@ -83,7 +83,7 @@ impl DatabaseManager {
     pub fn signal_with_backend(
         &self, content: &str, gist: Option<&str>, parent: Option<&str>,
         created_at: Option<&str>,
-        backend: Option<&dyn geniuz::embedding::EmbeddingBackend>,
+        backend: Option<&dyn crate::embedding::EmbeddingBackend>,
     ) -> Result<String, String> {
         if content.trim().is_empty() {
             return Err("Content cannot be empty".to_string());
@@ -115,7 +115,7 @@ impl DatabaseManager {
             b.embed(content)
                 .map_err(|e| format!("Embedding failed: {}. Run 'geniuz status' to check the embedding model.", e))?
         } else {
-            geniuz::embedding::embed_content(content)
+            crate::embedding::embed_content(content)
                 .map_err(|e| format!("Embedding failed: {}. Run 'geniuz status' to check the embedding model.", e))?
         };
 
@@ -134,7 +134,7 @@ impl DatabaseManager {
                 rusqlite::params![&uuid, &payload_str, &parent_uuid],
             ).map_err(|e| format!("Failed to insert: {}", e))?;
         }
-        let blob = geniuz::embedding::embedding_to_blob(&embedding);
+        let blob = crate::embedding::embedding_to_blob(&embedding);
         tx.execute(
             "INSERT INTO memory_embeddings (memory_uuid, embedding) VALUES (?1, ?2)",
             rusqlite::params![&uuid, blob],
@@ -251,7 +251,7 @@ impl DatabaseManager {
             return self.keyword_search(query, limit);
         }
 
-        let results = geniuz::embedding::semantic_search_cached(query, cached, limit)?;
+        let results = crate::embedding::semantic_search_cached(query, cached, limit)?;
         Ok(results.into_iter().map(|r| SignalEntry {
             memory_uuid: r.memory_uuid, gist: r.gist, created_at: r.created_at,
             parent_uuid: None, content: None, score: Some(r.score),
@@ -309,7 +309,7 @@ impl DatabaseManager {
 
     pub fn cache_embedding(&self, uuid: &str, embedding: &[f32]) -> Result<(), String> {
         let conn = self.conn()?;
-        let blob = geniuz::embedding::embedding_to_blob(embedding);
+        let blob = crate::embedding::embedding_to_blob(embedding);
         conn.execute(
             "INSERT OR REPLACE INTO memory_embeddings (memory_uuid, embedding) VALUES (?1, ?2)",
             rusqlite::params![uuid, blob],
@@ -317,7 +317,7 @@ impl DatabaseManager {
         Ok(())
     }
 
-    pub fn get_cached_embeddings(&self) -> Result<Vec<geniuz::embedding::CachedEmbedding>, String> {
+    pub fn get_cached_embeddings(&self) -> Result<Vec<crate::embedding::CachedEmbedding>, String> {
         let conn = self.conn()?;
         let mut stmt = conn.prepare(
             "SELECT e.memory_uuid,
@@ -330,8 +330,8 @@ impl DatabaseManager {
         let rows = stmt.query_map([], |row| {
             let blob: Vec<u8> = row.get(3)?;
             let uuid: String = row.get(0)?;
-            match geniuz::embedding::blob_to_embedding(&blob) {
-                Ok(embedding) => Ok(Some(geniuz::embedding::CachedEmbedding {
+            match crate::embedding::blob_to_embedding(&blob) {
+                Ok(embedding) => Ok(Some(crate::embedding::CachedEmbedding {
                     memory_uuid: uuid, gist: row.get(1)?,
                     created_at: row.get(2)?, embedding,
                 })),

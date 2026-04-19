@@ -19,6 +19,15 @@ path = "src/main.rs"
 name = "geniuz-embed"
 path = "src/embed_server.rs"
 
+[[bin]]
+name = "geniuz-tray"
+path = "src/tray.rs"
+required-features = ["tray"]
+
+[features]
+default = []
+tray = ["dep:eframe", "dep:egui", "dep:tray-icon", "dep:image", "dep:winit"]
+
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 rusqlite = { version = "0.32", features = ["bundled"] }
@@ -34,3 +43,10 @@ ort = { version = "2.0.0-rc.12", default-features = false, features = ["std", "a
 tokenizers = { version = "0.21", default-features = false, features = ["onig"] }
 ureq = { version = "3", features = ["json"] }
 interprocess = "2"
+
+# Tray + GUI — feature-gated, Windows/Mac only; Linux builds skip
+eframe = { version = "0.29", default-features = false, features = ["default_fonts", "glow", "wayland", "x11"], optional = true }
+egui = { version = "0.29", optional = true }
+tray-icon = { version = "0.19", optional = true }
+image = { version = "0.25", default-features = false, features = ["png"], optional = true }
+winit = { version = "0.30", optional = true }

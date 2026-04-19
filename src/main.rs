@@ -1,10 +1,10 @@
 mod adapter;
 mod cli;
-mod db;
 mod mcp;
 
 use clap::FromArgMatches;
 use cli::{Cli, Command};
+use geniuz::db;
 use std::path::PathBuf;
 
 fn main() {

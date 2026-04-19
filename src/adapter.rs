@@ -77,7 +77,7 @@ pub fn detect_workspace(path: &Path) -> Option<ClawWorkspace> {
 /// Returns (signals_created, errors).
 pub fn migrate(
     workspace: &ClawWorkspace,
-    db: &crate::db::DatabaseManager,
+    db: &geniuz::db::DatabaseManager,
 ) -> Result<(usize, usize), String> {
     let mut created = 0;
     let mut errors = 0;

@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::io::{self, BufRead, Write};
 
-use crate::db::{DatabaseManager, SignalEntry};
+use geniuz::db::{DatabaseManager, SignalEntry};
 
 // =============================================================================
 // MCP Protocol Types
