@@ -94,22 +94,13 @@ class GeniuzService: ObservableObject {
     /// the user's login-shell PATH doesn't include. That hid the affordance from
     /// users who still needed it — false positive.
     func checkCliOnPath() -> Bool {
-        let task = Process()
-        task.launchPath = "/usr/bin/which"
-        task.arguments = ["geniuz"]
-        // Use login-shell PATH by invoking via shell; ensures we match what the
-        // user's Terminal actually sees, not the app's sandboxed environment.
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        task.standardError = Pipe()
-        do {
-            try task.run()
-            task.waitUntilExit()
-            return task.terminationStatus == 0
-        } catch {
-            NSLog("[geniuz-app] which geniuz failed to launch: %@", error.localizedDescription)
-            return false
-        }
+        // The Copy Install Command only ever symlinks to one of these two
+        // locations, so these are the only paths worth checking for "did the
+        // install work." A `which geniuz` spawn would match shell semantics
+        // more broadly but won't inherit the user's login PATH under sandbox.
+        let fm = FileManager.default
+        return fm.isExecutableFile(atPath: "/usr/local/bin/geniuz")
+            || fm.isExecutableFile(atPath: "/opt/homebrew/bin/geniuz")
     }
 
     /// Copies a ready-to-paste sudo command to the clipboard that symlinks the
