@@ -85,7 +85,7 @@ fn run(cli: Cli) -> Result<String, String> {
             Ok(include_str!("../skills/SKILL.md").to_string())
         }
 
-        Command::Capture { paths, openclaw, split, gist_prefix, dry_run } => {
+        Command::Capture { paths, openclaw, split, gist_prefix, dry_run, force } => {
             // OpenClaw mode: use the adapter
             if let Some(oc_path) = openclaw {
                 let ws_path = oc_path.map(PathBuf::from)
@@ -120,7 +120,21 @@ fn run(cli: Cli) -> Result<String, String> {
                 return Err("No files specified. Use 'geniuz capture <files...>' or 'geniuz capture --openclaw'.".to_string());
             }
 
+            // Prose-format allowlist. Non-prose files (CSS, HTML, JS, binaries) produce
+            // noisy embeddings that pollute semantic recall across the whole store.
+            // The embedding model is trained on paraphrase similarity for natural language,
+            // not content-type classification — so our only honest gate is extension-based.
+            // --force bypasses the check for users who know what they're doing.
+            const PROSE_EXTENSIONS: &[&str] = &["md", "markdown", "txt", "rst", "org"];
+            fn is_prose_ext(path: &std::path::Path) -> bool {
+                path.extension()
+                    .and_then(|e| e.to_str())
+                    .map(|e| PROSE_EXTENSIONS.iter().any(|p| p.eq_ignore_ascii_case(e)))
+                    .unwrap_or(false)
+            }
+
             let mut files: Vec<PathBuf> = Vec::new();
+            let mut rejected: Vec<PathBuf> = Vec::new();
             for p in &paths {
                 let path = PathBuf::from(p);
                 if path.is_dir() {
@@ -128,20 +142,37 @@ fn run(cli: Cli) -> Result<String, String> {
                         Ok(entries) => {
                             for entry in entries.flatten() {
                                 let ep = entry.path();
-                                if ep.extension().map(|e| e == "md").unwrap_or(false) {
-                                    files.push(ep);
+                                if ep.is_file() {
+                                    if force || is_prose_ext(&ep) {
+                                        files.push(ep);
+                                    } else {
+                                        rejected.push(ep);
+                                    }
                                 }
                             }
                         }
                         Err(e) => eprintln!("[capture] Failed to read directory {}: {}", path.display(), e),
                     }
                 } else if path.is_file() {
-                    files.push(path);
+                    if force || is_prose_ext(&path) {
+                        files.push(path);
+                    } else {
+                        rejected.push(path);
+                    }
                 } else {
                     eprintln!("[capture] Not found: {}", path.display());
                 }
             }
             files.sort();
+
+            if !rejected.is_empty() {
+                eprintln!("[capture] {} file(s) refused (non-prose extensions; embeddings would be noisy):", rejected.len());
+                for r in &rejected {
+                    eprintln!("  skipped: {}", r.display());
+                }
+                eprintln!("  Accepted: {}", PROSE_EXTENSIONS.iter().map(|e| format!(".{}", e)).collect::<Vec<_>>().join(", "));
+                eprintln!("  Use --force to capture them anyway.");
+            }
 
             if files.is_empty() {
                 return Err("No files found to capture.".to_string());
@@ -266,6 +297,23 @@ fn run(cli: Cli) -> Result<String, String> {
 
             let db = get_db()?;
 
+            // UUID-shaped queries are a lookup key, not a semantic search target.
+            // A bare 8-char or 36-char hex-ish string embeds to noise; treating it as
+            // direct retrieval surfaces the matching memory instead of burying it
+            // under unrelated results. Bypassed by --keyword (explicit keyword mode).
+            fn looks_like_uuid(q: &str) -> bool {
+                let s = q.trim();
+                match s.len() {
+                    8 => s.chars().all(|c| c.is_ascii_hexdigit()),
+                    36 => {
+                        let b = s.as_bytes();
+                        b[8] == b'-' && b[13] == b'-' && b[18] == b'-' && b[23] == b'-'
+                            && s.chars().all(|c| c.is_ascii_hexdigit() || c == '-')
+                    }
+                    _ => false,
+                }
+            }
+
             let mut entries = if random {
                 match db.random()? {
                     Some(e) => vec![e],
@@ -276,7 +324,15 @@ fn run(cli: Cli) -> Result<String, String> {
                 db.recent(limit)?
             } else {
                 let q = query.as_deref().unwrap();
-                if keyword {
+                if !keyword && looks_like_uuid(q) {
+                    match db.get_by_uuid_prefix(q)? {
+                        Some(entry) => vec![entry],
+                        None => {
+                            eprintln!("[geniuz] No memory found matching UUID {} — falling back to semantic search.", q);
+                            db.semantic_search(q, limit)?
+                        }
+                    }
+                } else if keyword {
                     db.keyword_search(q, limit)?
                 } else {
                     db.semantic_search(q, limit)?

@@ -209,6 +209,41 @@ impl DatabaseManager {
         rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())
     }
 
+    /// Direct retrieval by UUID prefix (e.g. 8-char display form) or full 36-char UUID.
+    /// Returns the matching SignalEntry, or None if no memory matches. Case-insensitive
+    /// on the input; memories store UUIDs uppercase. Used by `recall` to short-circuit
+    /// UUID-shaped queries before falling through to semantic search — a UUID-shaped
+    /// query has no useful semantic content to embed, so treating it as a lookup key
+    /// is the honest thing to do.
+    pub fn get_by_uuid_prefix(&self, prefix: &str) -> Result<Option<SignalEntry>, String> {
+        let conn = self.conn()?;
+        let pattern = format!("{}%", prefix.to_uppercase());
+        let mut stmt = conn.prepare(
+            "SELECT memory_uuid,
+                    COALESCE(json_extract(payload, '$.gist'), substr(json_extract(payload, '$.content'), 1, 200)) as gist,
+                    created_at, parent_uuid, json_extract(payload, '$.content')
+             FROM memories WHERE memory_uuid LIKE ?1 LIMIT 1"
+        ).map_err(|e| format!("Query failed: {}", e))?;
+
+        let mut rows = stmt.query(rusqlite::params![pattern])
+            .map_err(|e| format!("Query failed: {}", e))?;
+        if let Some(row) = rows.next().map_err(|e| e.to_string())? {
+            let uuid: String = row.get(0).map_err(|e| e.to_string())?;
+            let parent: Option<String> = row.get(3).map_err(|e| e.to_string())?;
+            let display_parent = parent.filter(|p| p != &uuid);
+            Ok(Some(SignalEntry {
+                memory_uuid: uuid,
+                gist: row.get(1).map_err(|e| e.to_string())?,
+                created_at: row.get(2).map_err(|e| e.to_string())?,
+                parent_uuid: display_parent,
+                content: row.get(4).map_err(|e| e.to_string())?,
+                score: None,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
     /// Get the created_at timestamp of a signal by UUID prefix.
     pub fn get_signal_timestamp(&self, uuid_prefix: &str) -> Result<Option<String>, String> {
         let conn = self.conn()?;

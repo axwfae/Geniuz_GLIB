@@ -127,6 +127,12 @@ pub enum Command {
         /// Preview what would be captured without writing
         #[arg(long)]
         dry_run: bool,
+
+        /// Capture non-prose file extensions (.html, .js, .css, .json, etc.)
+        /// Default: only .md/.markdown/.txt/.rst/.org are accepted.
+        /// Non-prose files produce noisy embeddings that pollute semantic recall.
+        #[arg(long)]
+        force: bool,
     },
 
     /// Watch for new memories in real time
