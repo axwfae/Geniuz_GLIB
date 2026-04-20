@@ -104,6 +104,7 @@ struct GeniuzMenu: View {
             .padding(.bottom, 4)
         }
         .frame(width: 280)
+        .background(.regularMaterial)
     }
 
     // MARK: - CLI install section
