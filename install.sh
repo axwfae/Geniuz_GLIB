@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-REPO="jackccrawford/geniuz"
+REPO="axwfae/Geniuz_GLIB"
 GENIUZ_HOME="${GENIUZ_HOME:-$HOME/.geniuz}"
 INSTALL_DIR="${GENIUZ_HOME}/bin"
 LIB_DIR="${GENIUZ_HOME}/lib"
