@@ -1,0 +1,9 @@
+# Embed rpath so the binary finds libonnxruntime.so at runtime
+# without LD_LIBRARY_PATH or wrapper scripts.
+# $ORIGIN = the directory containing the binary itself.
+
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-C", "link-args=-Wl,-rpath,$ORIGIN:$ORIGIN/lib:$ORIGIN/../lib"]
+
+[target.aarch64-unknown-linux-gnu]
+rustflags = ["-C", "link-args=-Wl,-rpath,$ORIGIN:$ORIGIN/lib:$ORIGIN/../lib"]
