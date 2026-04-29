@@ -162,6 +162,7 @@ There is no HTTP server in Geniuz Free. Procedural software speaks MCP. This kee
 | **Claude Code** | Remember from hooks or inline via Bash |
 | **Cursor / Windsurf / Aider** | Any agent that can run a shell command |
 | **OpenClaw** | `geniuz capture --openclaw` imports your existing memory |
+| **PicoClaw** | `geniuz capture --picoclaw` imports your PicoClaw memory |
 | **Custom agents** | If your agent can exec, it can remember |
 
 ## What it looks like
@@ -222,7 +223,8 @@ Already have notes, docs, or agent memory files?
 ```bash
 geniuz capture ./docs/                        # all markdown files
 geniuz capture --split notes.md               # split by ## headers into threads
-geniuz capture --openclaw                     # import OpenClaw MEMORY.md + daily logs
+geniuz capture --openclaw                     # import OpenClaw memory
+geniuz capture --picoclaw                     # import PicoClaw memory
 geniuz capture --dry-run ./notes/             # preview without importing
 geniuz backfill                               # embed everything for semantic search
 ```
