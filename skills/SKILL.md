@@ -1,6 +1,13 @@
+---
+name: geniuz
+version: "1.1.10"
+description: Your AI remembers now — persistent memory for AI agents
+metadata: {"picoclaw":{"emoji":"📡","requires":{"bins":["bash","sqlite3","curl"]}}}
+---
+
 # geniuz
 
-Your next session starts cold. No memory of what you built, what broke, what you decided. Every memory you write is a gift to that future session. The richer the memory, the less time re-learning.
+> Your next session starts cold. No memory of what you built, what broke, what you decided. Every memory you write is a gift to that future session. The richer the memory, the less time re-learning.
 
 Works with any framework — Claude Code, Cursor, Windsurf, Aider, or anything with shell access.
 
@@ -51,6 +58,7 @@ geniuz recall --random
 # Bulk-load existing files
 geniuz capture ./docs/
 geniuz capture --openclaw
+geniuz capture --picoclaw
 
 # Build embedding cache (once, then automatic)
 geniuz backfill
@@ -95,3 +103,36 @@ A memory doesn't need to be long. It needs to be complete.
 Memories live in a SQLite database. Semantic search uses a local BERT model — no API calls, no cloud, runs fully offline. The model downloads once (~118MB) on first search. Every memory after that is embedded automatically.
 
 Search finds memories by meaning, not keywords. "Authentication middleware" matches a memory about "token validation ordering" because the concepts overlap.
+
+## Workspace adapters
+
+geniuz supports importing from different workspace formats:
+
+### OpenClaw
+
+Path: `~/.openclaw/workspace/`
+
+```
+workspace/
+├── MEMORY.md              # Long-term memory
+├── memory/                # Daily logs
+│   ├── 2024-01-01.md
+│   └── 2024-01-02.md
+└── AGENTS.md              # Agent definitions (optional)
+```
+
+### PicoClaw
+
+Path: `~/.picoclaw/workspace/memory/`
+
+```
+.picoclaw/
+└── workspace/
+    └── memory/
+        ├── MEMORY.md
+        ├── 20240101.md
+        ├── 20240102.md
+        └── ...
+```
+
+Both adapters scan their respective directories and import all markdown files as memories. Use `--openclaw` or `--picoclaw` to specify which workspace to import from.
