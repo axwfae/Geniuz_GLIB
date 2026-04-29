@@ -106,15 +106,19 @@ pub enum Command {
     /// Capture files or directories into your folder
     #[command(
         arg_required_else_help = true,
-        after_help = "Examples:\n  geniuz capture notes.md                              Single file\n  geniuz capture ./docs/                               All .md files in directory\n  geniuz capture *.md                                  Shell glob\n  geniuz capture --split notes.md                      Split by ## headers\n  geniuz capture --gist-prefix \"docs:\" a.md            Prefix all gists\n  geniuz capture --openclaw ~/.openclaw/workspace      Import OpenClaw memory\n  geniuz capture --dry-run ./notes/                    Preview without importing\n\nEach file becomes a memory. With --split, each ## section becomes\na threaded memory under the file's root."
+        after_help = "Examples:\n  geniuz capture notes.md                              Single file\n  geniuz capture ./docs/                               All .md files in directory\n  geniuz capture *.md                                  Shell glob\n  geniuz capture --split notes.md                      Split by ## headers\n  geniuz capture --gist-prefix \"docs:\" a.md            Prefix all gists\n  geniuz capture --openclaw ~/.openclaw/workspace      Import OpenClaw memory\n  geniuz capture --picoclaw ~/.picoclaw/workspace    Import Picoclaw memory\n  geniuz capture --dry-run ./notes/                    Preview without importing\n\nEach file becomes a memory. With --split, each ## section becomes\na threaded memory under the file's root."
     )]
     Capture {
-        /// Files or directories to capture (not used with --openclaw)
+        /// Files or directories to capture (not used with --openclaw or --picoclaw)
         paths: Vec<String>,
 
         /// Import an OpenClaw workspace
-        #[arg(long, conflicts_with = "paths")]
+        #[arg(long, conflicts_with = "paths", conflicts_with = "picoclaw")]
         openclaw: Option<Option<String>>,
+
+        /// Import a Picoclaw workspace
+        #[arg(long, conflicts_with = "paths", conflicts_with = "openclaw")]
+        picoclaw: Option<Option<String>>,
 
         /// Split files by ## headers into threaded memories
         #[arg(long)]
